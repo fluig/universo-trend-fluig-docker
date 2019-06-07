@@ -1,0 +1,77 @@
+---
+version: "3"
+services:
+   database-server:
+      image: docker.fluig.com/fluig/mysql
+      environment:
+         - MYSQL_ROOT_PASSWORD=YuCBDOZnqE5vL
+         - MYSQL_USER=fluig
+         - MYSQL_PASSWORD=OLyVu1gIwWmEr
+         - MYSQL_DATABASE=fluig
+      ports:
+         - ${dbPort}:${dbPort}
+      networks:
+         - fluig-docker-network
+   fluig-server:
+      image: docker.fluig.com/${repository}/fluig:${version}
+      depends_on:
+        - "database-server"
+      environment:
+         # database configuration
+         - dbType=${dbType}
+         - dbServer=${dbServer}
+         - dbPort=${dbPort}
+         - dbUser=${dbUser}
+         - dbPassword=${dbPassword}
+         - dbName=${dbName}
+         # index configuration
+         - solrUrl=http://solr-application:8983/solr
+         - solrIsRemote=true
+         - solrIsCloud=false
+         # license server configuration
+         - lsHost=${lsHost}
+         - lsPort=${lsPort}
+         # fluig configuration
+         - fluigHost=${fluigHost}
+         - fluigPort=${fluigPort}
+         - fluigUrl=${fluigUrl}
+         - fluigXms=2g
+         - fluigXmx=6g
+         # node
+         - nodeRealtimeAddress=node-application:8888
+      ports:
+         - ${fluigPort}:${fluigPort}
+         - ${lsPort}:${lsPort}
+         - ${debugPort}:${debugPort}
+         - ${ftpPort}:${ftpPort}
+         - ${ftpPrivFolderPort}:${ftpPrivFolderPort}
+         - ${ftpPassivePortMin}-${ftpPassivePortMax}:${ftpPassivePortMin}-${ftpPassivePortMax}
+      networks:
+         - fluig-docker-network
+      ulimits:
+         memlock:
+            soft: -1
+            hard: -1
+         nofile:
+            soft: 65536
+            hard: 65536
+      volumes:
+         - ${volume}:/opt/volume
+         - ${appsdir}:/opt/fluig/appserver/apps
+      command: ["/docker-entrypoint.sh","/opt/fluig/appserver/bin/domain.sh"]
+   index-server:
+      image: docker.fluig.com/${repository}/solr:${version}
+      volumes:
+         - solr:/opt/solr/data
+      networks:
+         - fluig-docker-network
+   realtime-server:
+      image: docker.fluig.com/${repository}/node:${version}
+      networks:
+         - fluig-docker-network
+      ports:
+         - ${nodeChatPort}:${nodeChatPort}
+networks:
+   fluig-docker-network:
+volumes:
+   solr:
